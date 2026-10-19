@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- エラー153対策：YouTubeに「どのページに埋め込まれているか」を必ず伝える（Googleサイト側の設定より優先される） -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex, nofollow">
+<title>2026年度 下期方針説明会（視聴ページ）</title>
+<style>
+  /* ===== 配色・基本スタイル（Googleサイト埋め込み用 v18：v17＋エラー153対策（origin・widget_referrer・referrerpolicyを最初から送る）） ===== */
+  :root{
+    --navy:#1F3A5F; --blue:#2E6DA4; --org:#C8641E;
+    --card:#FFFFFF; --text:#1E2430; --muted:#5F6B7A; --line:#D5DCE4;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:transparent}
+  body{color:var(--text);
+       font-family:"メイリオ",Meiryo,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;line-height:1.7}
+  main{max-width:960px;margin:0 auto;padding:4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+  .notice{font-size:14px}
+  .notice ul{margin:0;padding-left:1.4em}
+  .notice li{margin:2px 0}
+
+  /* 動画エリア */
+  .stage{background:#000;border-radius:6px;overflow:hidden}
+  .player-wrap{position:relative;width:100%;height:0;padding-top:56.25%;background:#000}  /* 16:9（古いSafariでも高さが出る書き方） */
+  #player{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%}
+
+  /* 動画の上にかぶせる透明カバー（YouTubeロゴ・タイトル等をクリックできなくする） */
+  #shield{position:absolute;top:0;left:0;right:0;bottom:0;z-index:2;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;background:transparent}
+  #shield.pass{pointer-events:none}
+  #bigPlay{width:76px;height:76px;border-radius:50%;background:rgba(0,0,0,.6);
+           display:flex;align-items:center;justify-content:center}
+  #bigPlay svg{width:34px;height:34px;fill:#fff;margin-left:5px}
+  #shield.playing #bigPlay{display:none}
+
+  /* 操作エリア */
+  .ctrl-area{background:#1E2430;color:#fff;font-size:14px;padding:6px 10px 8px}
+
+  /* 再生バー（薄い色＝視聴済みで移動できる範囲、オレンジ＝現在位置） */
+  .seek{position:relative;height:26px;cursor:pointer;touch-action:none;outline:none}
+  .seek:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:4px}
+  .seek .track{position:absolute;left:0;right:0;top:50%;height:6px;transform:translateY(-50%);
+               background:#4A576B;border-radius:3px;overflow:hidden}
+  #seekWatched{position:absolute;left:0;top:0;bottom:0;width:0;background:#9FB2C8}
+  #seekPlayed{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--org)}
+  #seekKnob{position:absolute;top:50%;left:0;width:16px;height:16px;margin-left:-8px;
+            transform:translateY(-50%);border-radius:50%;background:#fff;
+            box-shadow:0 0 0 2px var(--org);pointer-events:none}
+  #seekTip{position:absolute;bottom:100%;left:0;transform:translateX(-50%);
+           background:#000;color:#fff;font-size:12px;padding:2px 6px;border-radius:3px;
+           white-space:nowrap;display:none;pointer-events:none}
+  .seek.dragging #seekTip{display:block}
+
+  .ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
+  .ctrl button{background:#3A4556;color:#fff;border:0;border-radius:4px;padding:6px 12px;
+               font:inherit;cursor:pointer;min-height:36px}
+  .ctrl button:hover{background:#4A576B}
+  .ctrl button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .ctrl .time{margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .ctrl input[type=range]{width:90px}
+  .stage:fullscreen{display:flex;flex-direction:column;justify-content:center;border-radius:0}
+  .stage:fullscreen .player-wrap{flex:1;height:auto;padding-top:0}
+
+  .progress-row{margin-top:10px;font-size:14px}
+  .progress-row b{color:var(--blue)}
+  #msg{min-height:1.7em;margin-top:4px;font-size:14px;color:var(--org);font-weight:bold}
+  #survey{display:none;text-align:center;border:2px solid var(--org)}
+  #survey h2{margin:0 0 8px;color:var(--org);font-size:18px}
+  #survey a.btn{display:inline-block;background:var(--org);color:#fff;text-decoration:none;
+                padding:12px 28px;border-radius:6px;font-weight:bold;margin:8px 0}
+  #qrcode{display:inline-block;margin-top:8px;padding:8px;background:#fff}
+  .locked{color:var(--muted);font-size:14px;text-align:center;margin:0 0 16px}
+
+  /* 再生エラー時だけ表示する「Safariで開く」案内 */
+  #openSafari{display:none;margin-top:8px;padding:12px;border:2px solid var(--org);border-radius:8px;
+              background:#FFF7F0;color:var(--text);font-size:14px}
+  #openSafari p{margin:0 0 8px}
+  #openSafari .row{display:flex;gap:8px;flex-wrap:wrap}
+  #siteUrl{flex:1;min-width:0;font:inherit;font-size:13px;padding:8px;border:1px solid var(--line);
+           border-radius:4px;background:#fff;color:var(--text)}
+  #btnCopy{background:var(--org);color:#fff;border:0;border-radius:4px;padding:8px 16px;
+           font:inherit;font-weight:bold;cursor:pointer;min-height:40px}
+  #btnCopy:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+  #copyResult{margin-top:6px;font-weight:bold;color:var(--org)}
+
+  /* 拡大ウィンドウ（パソコン・Android）用のレイアウト */
+  body.popup{background:#1E2430;color:#fff}
+  body.popup main{max-width:none;padding:0}
+  body.popup .notice{display:none}
+  body.popup .card{background:#1E2430;color:#fff;border:0;border-radius:0;margin:0;padding:8px}
+  body.popup #survey{border:2px solid var(--org);margin:8px}
+  body.popup .stage{border-radius:0}
+  body.popup .player-wrap{padding-top:0;height:calc(100vh - 150px);min-height:240px}
+  body.popup .progress-row b{color:#9FB2C8}
+  body.popup .locked{color:#9FB2C8}
+
+  /* ===== スマホなど画面が狭いとき（幅520px未満）の表示 ===== */
+  @media (max-width:519px){
+    main{padding:0}
+    .pcard{padding:0;border:0;background:transparent;margin-bottom:8px}
+    .stage{border-radius:4px}
+    .ctrl-area{padding:4px 6px 6px}
+    .ctrl{flex-wrap:wrap;gap:4px;margin-top:2px}
+    .ctrl .time{order:-1;flex:0 0 100%;margin:0;text-align:right;font-size:12px;opacity:.85}
+    .ctrl button{flex:1 1 0;min-width:0;padding:6px 2px;font-size:13px;min-height:38px;white-space:nowrap}
+    .ctrl input[type=range]{display:none}  /* iPhoneでは音量は本体ボタンで調整するため非表示 */
+    .progress-row{margin-top:6px;padding:0 4px}
+    #msg{padding:0 4px;font-size:13px}
+    .locked{font-size:13px}
+  }
+</style>
+</head>
+<body>
+<main>
+  <section class="card pcard">
+    <div class="stage" id="stage">
+      <div class="player-wrap">
+        <div id="player"></div>
+        <div id="shield" title="クリックで再生／一時停止">
+          <div id="bigPlay"><svg viewBox="0 0 24 24"><path d="M6 4l15 8-15 8z"/></svg></div>
+        </div>
+      </div>
+      <div class="ctrl-area">
+        <div class="seek" id="seek" role="slider" tabindex="0" aria-label="再生位置"
+             aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+          <div class="track"><div id="seekWatched"></div><div id="seekPlayed"></div></div>
+          <div id="seekKnob"></div>
+          <div id="seekTip">0分00秒</div>
+        </div>
+        <div class="ctrl">
+          <button id="btnPlay" type="button">▶ 再生</button>
+          <button id="btnBack" type="button">10秒戻る</button>
+          <button id="btnLast" type="button">視聴済みの最後へ</button>
+          <button id="btnMute" type="button">音を消す</button>
+          <input id="vol" type="range" min="0" max="100" value="100" aria-label="音量">
+          <button id="btnFs" type="button">全画面</button>
+          <button id="btnClose" type="button" style="display:none">元の画面に戻る</button>
+          <span class="time" id="time">0分00秒 / 0分00秒</span>
+        </div>
+      </div>
+    </div>
+    <div class="progress-row">視聴済み：<b id="pct">0%</b></div>
+    <div id="msg"></div>
+    <div id="openSafari">
+      <p><b>この画面では動画を再生できません。</b><br>
+         下のボタンでこのページのURLをコピーし、<b>Safari</b>（パソコンの方はChromeまたはEdge）のアドレス欄に貼り付けて開いてください。<br>
+         ※ファイルを直接開いた場合やアプリ内のブラウザでは再生できないことがあります。Safariで開いても再生できない場合は、
+         「設定」→「アプリ」→「Safari」→「サイト越えトラッキングを防ぐ」を一時的にオフにしてから、ページを開き直してください。</p>
+      <div class="row">
+        <input id="siteUrl" type="text" readonly aria-label="このページのURL">
+        <button id="btnCopy" type="button">URLをコピー</button>
+      </div>
+      <div id="copyResult"></div>
+    </div>
+  </section>
+
+  <p id="lockedNote" class="locked">※アンケートは動画を最後まで視聴すると表示されます</p>
+
+  <section id="survey" class="card">
+    <h2>ご視聴ありがとうございました</h2>
+    <p>下のボタン、またはQRコードからアンケートにご回答ください。</p>
+    <a id="surveyLink" class="btn" href="#" target="_blank" rel="noopener">アンケートに回答する</a><br>
+    <div id="qrcode"></div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ===== 設定（ここだけ変更してください） ===== */
+var VIDEO_ID   = "E7J-9U5RhUg";                        // YouTube動画ID
+var SURVEY_URL = "https://example.com/ここにアンケートURL"; // アンケートURL
+var DONE_RATE  = 0.98;                                  // 何%視聴で完了とするか（0.98＝98%）
+var ALLOW_SKIP = 2;                                     // 先送りを許容する秒数（誤差対策）
+var SITE_URL   = "https://sites.google.com/view/ryukyunissan-hoshin2026h2/%E3%83%9B%E3%83%BC%E3%83%A0"; // 公開サイトのURL（再生エラー時の案内用）
+
+/* ===== 拡大ウィンドウ用：このページの元の内容を保存 ===== */
+var ORIGINAL_HTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+var INIT = null; /*__INIT__*/
+var INIT_TOKEN = "var INIT = null; /*__" + "INIT__*/";
+var IS_POPUP = (window.name === "hoshinBig");
+if (IS_POPUP) document.body.classList.add("popup");
+
+/* ===== エラー153対策：このページの「住所」をYouTubeに伝えるための値 =====
+   YouTubeは2025年から、埋め込み元のページ（Referer）が分からないと再生を拒否します（エラー153）。
+   Googleサイトの埋め込み枠・iPhoneのアプリ内ブラウザなどではRefererが送られないことがあるため、
+   origin / widget_referrer という追加情報でも埋め込み元を伝えます（YouTube公式が推奨する方法）。 */
+function pageIdentity(){
+  var href = "";
+  try { href = String(location.href || ""); } catch(e) {}
+  /* 拡大ウィンドウ（about:blank）やファイルを直接開いた場合は、元の画面のURL → 公開サイトのURLの順に使う */
+  if (!/^https?:/i.test(href) && INIT && INIT.pageUrl) href = INIT.pageUrl;
+  var m = /^(https?:\/\/[^\/?#]+)/i.exec(href);
+  /* origin は「本当にそのページで開いているとき」だけ渡す（違う値を渡すとプレーヤーと通信できなくなるため）。
+     widget_referrer は参考情報なので、ファイルを直接開いた場合でも公開サイトのURLを渡す。 */
+  return { url: m ? href : SITE_URL, origin: m ? m[1] : "" };
+}
+var PAGE = pageIdentity();
+
+/* ===== ボタンの表示名（画面が狭いときは短い名前にする） ===== */
+var SHORT_LABELS = {
+  "▶ 再生":"▶ 再生", "❚❚ 一時停止":"❚❚ 停止", "10秒戻る":"10秒戻る",
+  "視聴済みの最後へ":"続きへ", "音を消す":"消音", "音を出す":"音を出す",
+  "全画面をやめる":"戻す", "全画面で再生中":"再生中",
+  "全画面":"全画面", "全画面を終了":"戻す", "元の画面に戻る":"閉じる"
+};
+function isNarrow(){ return window.innerWidth < 520; }
+function setLabel(btn, text){
+  btn.setAttribute("data-long", text);
+  btn.setAttribute("aria-label", text);
+  btn.title = text;
+  btn.textContent = (isNarrow() && SHORT_LABELS[text]) ? SHORT_LABELS[text] : text;
+}
+function renderLabels(){
+  var bs = document.querySelectorAll(".ctrl button");
+  for (var i = 0; i < bs.length; i++){
+    setLabel(bs[i], bs[i].getAttribute("data-long") || bs[i].textContent);
+  }
+}
+window.addEventListener("resize", renderLabels);
+
+/* ===== 視聴状況の保存・読込（同じ端末で続きから再開するため） ===== */
+var KEY = "hoshin2026h2_" + VIDEO_ID;
+var maxWatched = 0;
+try { maxWatched = parseFloat(localStorage.getItem(KEY)) || 0; } catch(e) {}
+function save(){ try { localStorage.setItem(KEY, String(maxWatched)); } catch(e) {} }
+
+/* 拡大ウィンドウでは、元の画面の視聴状況を引き継ぐ */
+if (INIT && INIT.maxWatched > maxWatched){ maxWatched = INIT.maxWatched; save(); }
+
+/* ===== YouTubeプレーヤーの読み込み ===== */
+var tag = document.createElement("script");
+tag.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(tag);
+
+var player, duration = 0, timer = null, unlocked = false, ready = false, errored = false;
+var shield = document.getElementById("shield");
+var startAt = (INIT && typeof INIT.t === "number") ? Math.min(INIT.t, maxWatched) : maxWatched;   // 再生開始位置
+var IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+             (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+function onYouTubeIframeAPIReady(){ createPlayer(true); }
+
+/* inline=true：ページ内で再生 / inline=false：iPhoneで画面いっぱいに拡大して再生 */
+/* エラー153などのときだけ順番に試す、予備の接続方法 */
+var FALLBACKS = [
+  { host: "https://www.youtube.com",          policy: "strict-origin-when-cross-origin" },
+  { host: "https://www.youtube-nocookie.com", policy: "strict-origin-when-cross-origin" },
+  { host: "https://www.youtube.com",          policy: "unsafe-url" }
+];
+var fallbackStep = 0;
+
+function createPlayer(inline){
+  var vars = {
+    controls:0,        // YouTube標準の操作バーを非表示（ロゴ・標準シークバーを出さない）
+    rel:0, playsinline:(inline ? 1 : 0), disablekb:1, fs:0, iv_load_policy:3,
+    cc_load_policy:0,  // 字幕を初期表示しない
+    start:Math.floor(startAt),
+    widget_referrer: PAGE.url   // エラー153対策：埋め込み元ページのURL
+  };
+  if (PAGE.origin) vars.origin = PAGE.origin;   // エラー153対策：埋め込み元ページのオリジン（Refererが送られない環境向け）
+  var events = {
+      onReady: function(){
+        ready = true; errored = false;
+        hideCaptions();
+        duration = player.getDuration();
+        seekEl.setAttribute("aria-valuemax", Math.floor(duration));
+        refresh();
+        if (maxWatched > 5 && inline) msg("前回の続き（" + fmt(maxWatched) + "）から再開できます。");
+        clearInterval(timer);
+        timer = setInterval(check, 500);
+      },
+      onStateChange: function(e){
+        var playing = (e.data === YT.PlayerState.PLAYING);
+        shield.classList.toggle("playing", playing);
+        setLabel(document.getElementById("btnPlay"), playing ? "❚❚ 一時停止" : "▶ 再生");
+        if (playing || e.data === YT.PlayerState.BUFFERING) shield.classList.remove("pass"); // カバーを元に戻す
+        if (playing) hideCaptions();  // 再生開始時に字幕が出ても消す
+        if (e.data === YT.PlayerState.ENDED) finish();
+      },
+      onPlaybackRateChange: function(){
+        /* 倍速再生を禁止 */
+        if (player.getPlaybackRate() !== 1){
+          player.setPlaybackRate(1);
+          msg("倍速再生はできません。通常の速度でご視聴ください。");
+        }
+      },
+      onError: function(e){
+        /* エラー時はカバーを外さない（エラー画面の「YouTubeで見る」を押せないようにする） */
+        shield.classList.remove("pass");
+        var code = e && e.data;
+        /* エラー153など、動画自体の問題（削除・非公開・埋め込み不可）以外なら、別の接続方法で自動的に再試行 */
+        if ([2, 5, 100, 101, 150].indexOf(code) < 0 && fallbackStep < FALLBACKS.length){
+          fallbackStep++;
+          msg("再生方法を切り替えています。少しお待ちください…（" + fallbackStep + "/" + FALLBACKS.length + "）");
+          setTimeout(function(){ rebuildPlayer(!bigMode); }, 300);
+          return;
+        }
+        errored = true;
+        showError("動画を再生できませんでした（エラー" + code + "）。解決しない場合は経営本部までご連絡ください。");
+        showSafariHelp();
+      }
+  };
+
+  if (fallbackStep === 0){
+    /* 通常の接続方法（Safari・パソコンで再生できている方法）＋ エラー153対策の情報を追加 */
+    player = new YT.Player("player", {
+      videoId: VIDEO_ID,
+      host: "https://www.youtube.com",
+      playerVars: vars,
+      events: events
+    });
+    /* 作られた枠にもRefererを送る設定を付けておく（間に合えば効く。付けても害はない） */
+    try { player.getIframe().setAttribute("referrerpolicy", "strict-origin-when-cross-origin"); } catch(e) {}
+  } else {
+    /* エラー時だけ使う予備の接続方法 */
+    var fb = FALLBACKS[fallbackStep - 1];
+    var q = ["enablejsapi=1"];
+    for (var k in vars){ if (vars.hasOwnProperty(k)) q.push(encodeURIComponent(k) + "=" + encodeURIComponent(vars[k])); }
+    var f = document.createElement("iframe");
+    f.id = "player";
+    f.setAttribute("referrerpolicy", fb.policy);   // src より先に設定する（読み込み開始前に効かせるため）
+    f.setAttribute("allow", "autoplay; encrypted-media; picture-in-picture; web-share");
+    f.src = fb.host + "/embed/" + VIDEO_ID + "?" + q.join("&");
+    f.setAttribute("frameborder", "0");
+    f.setAttribute("title", "動画プレーヤー");
+    var old = document.getElementById("player");
+    old.parentNode.replaceChild(f, old);
+    player = new YT.Player(f, { events: events });
+  }
+
+  /* 15秒たってもプレーヤーが準備できない場合も、予備の接続方法を試す */
+  var myStep = fallbackStep;
+  setTimeout(function(){
+    if (!ready && !errored && fallbackStep === myStep && fallbackStep < FALLBACKS.length){
+      fallbackStep++;
+      msg("再生方法を切り替えています。少しお待ちください…（" + fallbackStep + "/" + FALLBACKS.length + "）");
+      rebuildPlayer(!bigMode);
+    }
+  }, 15000);
+}
+
+/* ===== 字幕（自動文字起こし）を非表示にする ===== */
+function hideCaptions(){
+  try { player.unloadModule("captions"); } catch(e) {}
+  try { player.unloadModule("cc"); } catch(e) {}
+}
+
+/* ===== 再生／一時停止 ===== */
+function togglePlay(){
+  if (!ready) return;
+  var s = player.getPlayerState();
+  if (s === YT.PlayerState.PLAYING || s === YT.PlayerState.BUFFERING){
+    player.pauseVideo();
+  } else {
+    player.playVideo();
+    /* iPhone等でボタンから再生できない場合の対策：一時的にカバーを外し、動画を直接タップしてもらう */
+    setTimeout(function(){
+      var st = player.getPlayerState();
+      if (!errored && st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING){
+        shield.classList.add("pass");
+        msg("動画の中央にある再生ボタンを直接タップしてください。");
+      }
+    }, 1500);
+  }
+}
+shield.addEventListener("click", togglePlay);
+document.getElementById("btnPlay").addEventListener("click", togglePlay);
+
+/* ===== 指定位置へ移動（視聴済みの範囲内だけ） ===== */
+function seekWithin(t){
+  if (!ready || !duration) return;
+  if (t > maxWatched){
+    t = maxWatched;
+    msg("視聴済みの範囲より先には進めません。");
+  }
+  if (t < 0) t = 0;
+  player.seekTo(t, true);
+  refresh(t);
+}
+
+/* ===== 10秒戻る ===== */
+document.getElementById("btnBack").addEventListener("click", function(){
+  if (!ready) return;
+  seekWithin(player.getCurrentTime() - 10);
+});
+
+/* ===== 視聴済みの最後へ ===== */
+document.getElementById("btnLast").addEventListener("click", function(){
+  if (!ready) return;
+  seekWithin(maxWatched);
+  msg("視聴済みの最後（" + fmt(maxWatched) + "）に移動しました。");
+});
+
+/* ===== 再生バーの操作（タップ・ドラッグ） ===== */
+var seekEl = document.getElementById("seek");
+var dragging = false, dragTime = 0;
+function timeFromX(clientX){
+  var r = seekEl.getBoundingClientRect();
+  var ratio = (clientX - r.left) / r.width;
+  ratio = Math.max(0, Math.min(1, ratio));
+  return ratio * duration;
+}
+seekEl.addEventListener("pointerdown", function(e){
+  if (!ready || !duration) return;
+  dragging = true;
+  seekEl.classList.add("dragging");
+  try { seekEl.setPointerCapture(e.pointerId); } catch(err) {}
+  dragTime = Math.min(timeFromX(e.clientX), maxWatched);
+  drawSeek(dragTime);
+  e.preventDefault();
+});
+seekEl.addEventListener("pointermove", function(e){
+  if (!dragging) return;
+  dragTime = Math.min(timeFromX(e.clientX), maxWatched);  // 視聴済みの位置で止める
+  drawSeek(dragTime);
+});
+function endDrag(e){
+  if (!dragging) return;
+  dragging = false;
+  seekEl.classList.remove("dragging");
+  var wanted = timeFromX(e.clientX);
+  seekWithin(wanted);   // 視聴済みより先を指定した場合は、視聴済みの位置に移動してお知らせ
+}
+seekEl.addEventListener("pointerup", endDrag);
+seekEl.addEventListener("pointercancel", function(){
+  dragging = false; seekEl.classList.remove("dragging"); refresh();
+});
+/* キーボード操作（←→で5秒ずつ） */
+seekEl.addEventListener("keydown", function(e){
+  if (!ready) return;
+  if (e.key === "ArrowLeft"){ seekWithin(player.getCurrentTime() - 5); e.preventDefault(); }
+  if (e.key === "ArrowRight"){ seekWithin(player.getCurrentTime() + 5); e.preventDefault(); }
+});
+
+/* ===== 音量 ===== */
+document.getElementById("btnMute").addEventListener("click", function(){
+  if (!ready) return;
+  if (player.isMuted()){ player.unMute(); setLabel(this, "音を消す"); }
+  else { player.mute(); setLabel(this, "音を出す"); }
+});
+document.getElementById("vol").addEventListener("input", function(){
+  if (!ready) return;
+  player.setVolume(parseInt(this.value, 10));
+  if (player.isMuted() && this.value > 0){ player.unMute(); setLabel(document.getElementById("btnMute"), "音を消す"); }
+});
+
+/* ===== 全画面・拡大表示 ===== */
+var stage = document.getElementById("stage");
+var btnFs = document.getElementById("btnFs");
+var btnClose = document.getElementById("btnClose");
+var bigMode = false;
+var bigWin = null, bigWinTimer = null, lastBigT = null;
+
+function canFullscreen(){ return !!(document.fullscreenEnabled && stage.requestFullscreen); }
+function setupNativeFullscreen(){
+  setLabel(btnFs, "全画面");
+  btnFs.addEventListener("click", function(){
+    if (document.fullscreenElement){ document.exitFullscreen(); }
+    else {
+      var r1 = stage.requestFullscreen();
+      if (r1 && r1.catch) r1.catch(function(){ msg("この画面では全画面表示ができません。"); });
+    }
+  });
+  document.addEventListener("fullscreenchange", function(){
+    setLabel(btnFs, document.fullscreenElement ? "全画面を終了" : "全画面");
+  });
+}
+
+if (IS_POPUP){
+  /* 拡大ウィンドウの中：全画面ボタン（使える場合）と「元の画面に戻る」ボタン */
+  if (canFullscreen()) setupNativeFullscreen(); else btnFs.style.display = "none";
+  btnClose.style.display = "";
+  btnClose.addEventListener("click", function(){ postState(); window.close(); });
+  if (canFullscreen()){
+    /* 動画（または再生ボタン）を押したら、すぐに全画面にする */
+    var goFull = function(){
+      if (!document.fullscreenElement){
+        var r2 = stage.requestFullscreen();
+        if (r2 && r2.catch) r2.catch(function(){});
+      }
+    };
+    shield.addEventListener("click", goFull);
+    document.getElementById("btnPlay").addEventListener("click", goFull);
+    showError("動画をクリック（タップ）すると、全画面で再生が始まります。");
+    /* 全画面を終了したら、このウィンドウを閉じて元の画面に戻る */
+    var wasFull = false;
+    document.addEventListener("fullscreenchange", function(){
+      if (document.fullscreenElement){ wasFull = true; msg(""); }
+      else if (wasFull){ postState(); setTimeout(function(){ window.close(); }, 200); }
+    });
+  }
+  setInterval(postState, 1000);
+  window.addEventListener("pagehide", postState);
+  window.addEventListener("beforeunload", postState);
+} else if (canFullscreen()){
+  /* 全画面表示が許可されている場合 */
+  setupNativeFullscreen();
+} else if (IS_IOS){
+  /* iPhone・iPad：プレーヤーを作り直し、再生時に画面いっぱいに拡大されるようにする */
+  setLabel(btnFs, "全画面");
+  btnFs.addEventListener("click", function(){
+    if (!ready && !errored) return;
+    bigMode = !bigMode;
+    rebuildPlayer(!bigMode);
+    setLabel(btnFs, bigMode ? "全画面をやめる" : "全画面");
+    if (bigMode){
+      showError("動画の▶（または「再生」）をタップすると、全画面で再生されます。元に戻すときは左上の「×」か「完了」を押してください。");
+    } else {
+      msg("通常の表示に戻しました。");
+    }
+  });
+} else {
+  /* パソコン・Android：大きな別ウィンドウを開いて再生する */
+  setLabel(btnFs, "全画面");
+  btnFs.addEventListener("click", openBigWindow);
+}
+
+/* 拡大ウィンドウを開く（視聴状況を引き継ぐ） */
+function openBigWindow(){
+  if (bigWin && !bigWin.closed){ try { bigWin.focus(); } catch(e) {} return; }
+  var t = maxWatched;
+  try { if (player && player.getCurrentTime) t = player.getCurrentTime(); player.pauseVideo(); } catch(e) {}
+  var html = ORIGINAL_HTML.replace(INIT_TOKEN,
+    "var INIT = " + JSON.stringify({ maxWatched: maxWatched, t: Math.min(t, maxWatched), pageUrl: PAGE.url }) + ";");
+  var w = screen.availWidth || 1280, h = screen.availHeight || 800;
+  bigWin = window.open("", "hoshinBig", "width=" + w + ",height=" + h + ",left=0,top=0");
+  if (!bigWin){
+    msg("全画面用のウィンドウを開けませんでした。ブラウザのポップアップブロックを解除してから、もう一度押してください。");
+    return;
+  }
+  bigWin.document.open();
+  bigWin.document.write(html);
+  bigWin.document.close();
+  setLabel(btnFs, "全画面で再生中");
+  msg("全画面用のウィンドウで再生します。全画面を終了すると、この画面に戻ります。");
+  clearInterval(bigWinTimer);
+  bigWinTimer = setInterval(function(){
+    if (bigWin && bigWin.closed){
+      clearInterval(bigWinTimer);
+      bigWin = null;
+      setLabel(btnFs, "全画面");
+      if (ready && lastBigT !== null) seekWithin(Math.min(lastBigT, maxWatched));
+      refresh();
+      msg("元の画面に戻りました。全画面で見た分も視聴済みに反映されています。");
+    }
+  }, 700);
+}
+
+/* 拡大ウィンドウ → 元の画面へ視聴状況を送る */
+function postState(){
+  if (!IS_POPUP || !window.opener) return;
+  var t = 0;
+  try { if (player && player.getCurrentTime) t = player.getCurrentTime(); } catch(e) {}
+  try { window.opener.postMessage({ type: "hoshin2026h2", maxWatched: maxWatched, t: t, finished: unlocked }, "*"); } catch(e) {}
+}
+
+/* 元の画面：拡大ウィンドウから視聴状況を受け取る */
+window.addEventListener("message", function(e){
+  if (!bigWin || e.source !== bigWin) return;
+  var d = e.data;
+  if (!d || d.type !== "hoshin2026h2") return;
+  if (typeof d.maxWatched === "number" && d.maxWatched > maxWatched){ maxWatched = d.maxWatched; save(); }
+  if (typeof d.t === "number") lastBigT = d.t;
+  refresh();
+  if (d.finished) finish();
+});
+
+/* プレーヤーを作り直す（再生位置・視聴済みの範囲は引き継ぐ） */
+function rebuildPlayer(inline){
+  var t = maxWatched;
+  try { if (player && player.getCurrentTime) t = player.getCurrentTime(); } catch(e) {}
+  startAt = Math.min(t, maxWatched);
+  clearInterval(timer);
+  ready = false;
+  try { player.destroy(); } catch(e) {}
+  if (!document.getElementById("player")){
+    var d = document.createElement("div");
+    d.id = "player";
+    shield.parentNode.insertBefore(d, shield);
+  }
+  shield.classList.remove("playing");
+  shield.classList.remove("pass");
+  setLabel(document.getElementById("btnPlay"), "▶ 再生");
+  createPlayer(inline);
+}
+
+/* ===== 早送りの監視（0.5秒ごと） ===== */
+function check(){
+  if (!player || !player.getCurrentTime) return;
+  if (!duration) duration = player.getDuration();
+  var t = player.getCurrentTime();
+  if (t > maxWatched + ALLOW_SKIP){
+    /* 視聴済み位置より先に飛ばした → 視聴済み位置へ戻す */
+    player.seekTo(maxWatched, true);
+    msg("早送りはできません。視聴済みの位置（" + fmt(maxWatched) + "）に戻りました。");
+    return;
+  }
+  if (t > maxWatched){ maxWatched = t; save(); }
+  refresh();
+  if (duration && maxWatched >= duration * DONE_RATE && player.getPlayerState() === YT.PlayerState.ENDED) finish();
+}
+
+/* ===== 視聴完了 → アンケート表示 ===== */
+function finish(){
+  if (unlocked) return;
+  if (!duration || maxWatched < duration * DONE_RATE) return;  // 最後まで見ていない場合は表示しない
+  unlocked = true;
+  maxWatched = duration; save(); refresh();
+  if (document.fullscreenElement){ try { document.exitFullscreen(); } catch(e) {} }
+  document.getElementById("lockedNote").style.display = "none";
+  var box = document.getElementById("survey");
+  box.style.display = "block";
+  document.getElementById("surveyLink").href = SURVEY_URL;
+  try { new QRCode(document.getElementById("qrcode"), { text: SURVEY_URL, width: 160, height: 160 }); } catch(e) {}
+  msg("");
+  box.scrollIntoView({ behavior: "smooth" });
+  if (IS_POPUP) postState();
+}
+
+/* ===== 表示まわり ===== */
+function drawSeek(cur){
+  if (!duration) return;
+  var w = Math.min(100, maxWatched / duration * 100);
+  var c = Math.min(100, Math.max(0, cur / duration * 100));
+  document.getElementById("seekWatched").style.width = w + "%";
+  document.getElementById("seekPlayed").style.width = c + "%";
+  document.getElementById("seekKnob").style.left = c + "%";
+  var tip = document.getElementById("seekTip");
+  tip.style.left = c + "%";
+  tip.textContent = fmt(cur);
+  seekEl.setAttribute("aria-valuenow", Math.floor(cur));
+  seekEl.setAttribute("aria-valuetext", fmt(cur));
+}
+function refresh(forceTime){
+  var t = (typeof forceTime === "number") ? forceTime
+        : ((player && player.getCurrentTime) ? player.getCurrentTime() : 0);
+  if (!dragging) drawSeek(t);
+  var p = duration ? Math.min(100, Math.floor(maxWatched / duration * 100)) : 0;
+  document.getElementById("pct").textContent = p + "%";
+  document.getElementById("time").textContent = fmt(t) + " / " + fmt(duration);
+}
+/* ===== 再生エラー時：URLをコピーしてSafariで開いてもらう案内 ===== */
+function showSafariHelp(){
+  if (IS_POPUP) return;
+  var box = document.getElementById("openSafari");
+  document.getElementById("siteUrl").value = decodeURISafe(SITE_URL);
+  box.style.display = "block";
+}
+function decodeURISafe(u){ try { return decodeURI(u); } catch(e) { return u; } }
+document.getElementById("btnCopy").addEventListener("click", function(){
+  var input = document.getElementById("siteUrl");
+  var result = document.getElementById("copyResult");
+  var text = SITE_URL;
+  function fallback(){
+    /* 自動コピーが使えない場合：URLを選択状態にする */
+    input.focus(); input.select();
+    try { input.setSelectionRange(0, input.value.length); } catch(e) {}
+    var ok = false;
+    try { input.value = text; input.select(); ok = document.execCommand("copy"); } catch(e) {}
+    input.value = decodeURISafe(SITE_URL);
+    result.textContent = ok
+      ? "コピーしました。Safariを開いて、アドレス欄に貼り付けてください。"
+      : "自動でコピーできませんでした。上のURLを長押しして「すべてを選択」→「コピー」してください。";
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      result.textContent = "コピーしました。Safariを開いて、アドレス欄に貼り付けてください。";
+    }, fallback);
+  } else {
+    fallback();
+  }
+});
+
+var msgTimer;
+/* エラー表示（自動で消えない） */
+function showError(s){
+  clearTimeout(msgTimer);
+  document.getElementById("msg").textContent = s;
+}
+function msg(s){
+  var el = document.getElementById("msg");
+  el.textContent = s;
+  clearTimeout(msgTimer);
+  if (s) msgTimer = setTimeout(function(){ el.textContent = ""; }, 6000);
+}
+function fmt(sec){
+  sec = Math.floor(sec || 0);
+  return Math.floor(sec / 60) + "分" + ("0" + (sec % 60)).slice(-2) + "秒";
+}
+renderLabels();
+</script>
+</body>
+</html>
