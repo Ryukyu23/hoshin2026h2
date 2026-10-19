@@ -8,7 +8,13 @@
 <meta name="robots" content="noindex, nofollow">
 <title>2026年度 下期方針説明会（視聴ページ）</title>
 <style>
-  /* ===== 配色・基本スタイル（Googleサイト埋め込み用 v18：v17＋エラー153対策（origin・widget_referrer・referrerpolicyを最初から送る）） ===== */
+  /* ===== 配色・基本スタイル（GitHub Pages用 v19）=====
+     v18からの変更点：
+     ・全画面：このページを直接開いているときはブラウザの全画面機能を使い、
+       Googleサイトなどの枠の中にあるときは「このページ自身のURL」を別タブで開いて全画面にする
+       （枠の中では全画面が許可されないため。以前の「白紙ウィンドウに書き込む方式」は廃止）
+     ・SITE_URL を空欄にすると、自動的にこのページ自身のURLを使う
+     ・iPad/iPhone向けの全画面（webkit系）にも対応                                    */
   :root{
     --navy:#1F3A5F; --blue:#2E6DA4; --org:#C8641E;
     --card:#FFFFFF; --text:#1E2430; --muted:#5F6B7A; --line:#D5DCE4;
@@ -62,8 +68,10 @@
   .ctrl button:focus-visible{outline:2px solid #fff;outline-offset:2px}
   .ctrl .time{margin-left:auto;font-variant-numeric:tabular-nums;white-space:nowrap}
   .ctrl input[type=range]{width:90px}
-  .stage:fullscreen{display:flex;flex-direction:column;justify-content:center;border-radius:0}
+  .stage:fullscreen{display:flex;flex-direction:column;justify-content:center;border-radius:0;width:100%;height:100%}
   .stage:fullscreen .player-wrap{flex:1;height:auto;padding-top:0}
+  .stage:-webkit-full-screen{display:flex;flex-direction:column;justify-content:center;border-radius:0;width:100%;height:100%}
+  .stage:-webkit-full-screen .player-wrap{flex:1;height:auto;padding-top:0}
 
   .progress-row{margin-top:10px;font-size:14px}
   .progress-row b{color:var(--blue)}
@@ -175,30 +183,37 @@ var VIDEO_ID   = "E7J-9U5RhUg";                        // YouTube動画ID
 var SURVEY_URL = "https://example.com/ここにアンケートURL"; // アンケートURL
 var DONE_RATE  = 0.98;                                  // 何%視聴で完了とするか（0.98＝98%）
 var ALLOW_SKIP = 2;                                     // 先送りを許容する秒数（誤差対策）
-var SITE_URL   = "https://sites.google.com/view/ryukyunissan-hoshin2026h2/%E3%83%9B%E3%83%BC%E3%83%A0"; // 公開サイトのURL（再生エラー時の案内用）
+var SITE_URL   = "";   // このページの公開URL。空欄のままなら自動（GitHub Pagesで開いたURL）を使うので、通常は変更不要
 
-/* ===== 拡大ウィンドウ用：このページの元の内容を保存 ===== */
-var ORIGINAL_HTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
-var INIT = null; /*__INIT__*/
-var INIT_TOKEN = "var INIT = null; /*__" + "INIT__*/";
-var IS_POPUP = (window.name === "hoshinBig");
-if (IS_POPUP) document.body.classList.add("popup");
-
-/* ===== エラー153対策：このページの「住所」をYouTubeに伝えるための値 =====
-   YouTubeは2025年から、埋め込み元のページ（Referer）が分からないと再生を拒否します（エラー153）。
-   Googleサイトの埋め込み枠・iPhoneのアプリ内ブラウザなどではRefererが送られないことがあるため、
-   origin / widget_referrer という追加情報でも埋め込み元を伝えます（YouTube公式が推奨する方法）。 */
+/* ===== このページの「住所」（URL・オリジン） =====
+   ・エラー153対策：YouTubeは2025年から、埋め込み元ページ（Referer）が分からないと再生を拒否します。
+     Googleサイトの枠の中やアプリ内ブラウザではRefererが送られないことがあるため、
+     origin / widget_referrer という追加情報でも埋め込み元を伝えます（YouTube公式が推奨する方法）。
+   ・全画面用の別タブも、このURLを開きます。 */
 function pageIdentity(){
   var href = "";
   try { href = String(location.href || ""); } catch(e) {}
-  /* 拡大ウィンドウ（about:blank）やファイルを直接開いた場合は、元の画面のURL → 公開サイトのURLの順に使う */
-  if (!/^https?:/i.test(href) && INIT && INIT.pageUrl) href = INIT.pageUrl;
+  href = href.replace(/[?#].*$/, "");                       // ?big=1 や #t=… は取り除く
+  if (!/^https?:/i.test(href)) href = SITE_URL;             // ファイルを直接開いた場合などは設定値を使う
   var m = /^(https?:\/\/[^\/?#]+)/i.exec(href);
-  /* origin は「本当にそのページで開いているとき」だけ渡す（違う値を渡すとプレーヤーと通信できなくなるため）。
-     widget_referrer は参考情報なので、ファイルを直接開いた場合でも公開サイトのURLを渡す。 */
-  return { url: m ? href : SITE_URL, origin: m ? m[1] : "" };
+  return { url: href, origin: m ? m[1] : "" };
 }
 var PAGE = pageIdentity();
+
+/* ===== 全画面用の別タブかどうか（URLに ?big=1 が付いていれば別タブ） ===== */
+var IS_POPUP = /(^|[?&])big=1(&|$)/.test(location.search);
+if (IS_POPUP) document.body.classList.add("popup");
+/* 別タブに引き継ぐ値（#t=再生位置&max=視聴済み秒数）を読む */
+var INIT = null;
+if (IS_POPUP){
+  var hm = {};
+  location.hash.replace(/^#/, "").split("&").forEach(function(kv){
+    var p = kv.split("="); if (p[0]) hm[p[0]] = parseFloat(p[1]);
+  });
+  INIT = { t: isNaN(hm.t) ? 0 : hm.t, maxWatched: isNaN(hm.max) ? 0 : hm.max };
+}
+/* Googleサイトなどの枠の中で表示されているか */
+var IN_FRAME = (function(){ try { return window.self !== window.top; } catch(e) { return true; } })();
 
 /* ===== ボタンの表示名（画面が狭いときは短い名前にする） ===== */
 var SHORT_LABELS = {
@@ -455,52 +470,48 @@ var btnClose = document.getElementById("btnClose");
 var bigMode = false;
 var bigWin = null, bigWinTimer = null, lastBigT = null;
 
-function canFullscreen(){ return !!(document.fullscreenEnabled && stage.requestFullscreen); }
+/* --- ブラウザの全画面機能（標準＋Safari系の webkit 版の両方に対応） --- */
+function fsEnabled(){
+  return !!(document.fullscreenEnabled || document.webkitFullscreenEnabled) &&
+         !!(stage.requestFullscreen || stage.webkitRequestFullscreen);
+}
+function fsElement(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function requestFs(onFail){
+  var r = null;
+  try {
+    if (stage.requestFullscreen) r = stage.requestFullscreen();
+    else if (stage.webkitRequestFullscreen) r = stage.webkitRequestFullscreen();
+  } catch(e) { if (onFail) onFail(); return; }
+  if (r && r.catch) r.catch(function(){ if (onFail) onFail(); });
+}
+function exitFs(){
+  try {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  } catch(e) {}
+}
+function onFsChange(fn){
+  document.addEventListener("fullscreenchange", fn);
+  document.addEventListener("webkitfullscreenchange", fn);
+}
 function setupNativeFullscreen(){
   setLabel(btnFs, "全画面");
   btnFs.addEventListener("click", function(){
-    if (document.fullscreenElement){ document.exitFullscreen(); }
+    if (fsElement()){ exitFs(); }
     else {
-      var r1 = stage.requestFullscreen();
-      if (r1 && r1.catch) r1.catch(function(){ msg("この画面では全画面表示ができません。"); });
+      requestFs(function(){
+        /* 全画面が拒否された場合（枠の中など）は、別タブで開く方式に切り替える */
+        if (!IS_POPUP && PAGE.url){ openBigWindow(); }
+        else { msg("この画面では全画面表示ができません。"); }
+      });
     }
   });
-  document.addEventListener("fullscreenchange", function(){
-    setLabel(btnFs, document.fullscreenElement ? "全画面を終了" : "全画面");
+  onFsChange(function(){
+    setLabel(btnFs, fsElement() ? "全画面を終了" : "全画面");
   });
 }
-
-if (IS_POPUP){
-  /* 拡大ウィンドウの中：全画面ボタン（使える場合）と「元の画面に戻る」ボタン */
-  if (canFullscreen()) setupNativeFullscreen(); else btnFs.style.display = "none";
-  btnClose.style.display = "";
-  btnClose.addEventListener("click", function(){ postState(); window.close(); });
-  if (canFullscreen()){
-    /* 動画（または再生ボタン）を押したら、すぐに全画面にする */
-    var goFull = function(){
-      if (!document.fullscreenElement){
-        var r2 = stage.requestFullscreen();
-        if (r2 && r2.catch) r2.catch(function(){});
-      }
-    };
-    shield.addEventListener("click", goFull);
-    document.getElementById("btnPlay").addEventListener("click", goFull);
-    showError("動画をクリック（タップ）すると、全画面で再生が始まります。");
-    /* 全画面を終了したら、このウィンドウを閉じて元の画面に戻る */
-    var wasFull = false;
-    document.addEventListener("fullscreenchange", function(){
-      if (document.fullscreenElement){ wasFull = true; msg(""); }
-      else if (wasFull){ postState(); setTimeout(function(){ window.close(); }, 200); }
-    });
-  }
-  setInterval(postState, 1000);
-  window.addEventListener("pagehide", postState);
-  window.addEventListener("beforeunload", postState);
-} else if (canFullscreen()){
-  /* 全画面表示が許可されている場合 */
-  setupNativeFullscreen();
-} else if (IS_IOS){
-  /* iPhone・iPad：プレーヤーを作り直し、再生時に画面いっぱいに拡大されるようにする */
+/* --- iPhone向け：プレーヤーを作り直し、再生時に画面いっぱいに拡大されるようにする（iPhoneのSafariには要素の全画面機能がないため） --- */
+function setupIosFullscreen(){
   setLabel(btnFs, "全画面");
   btnFs.addEventListener("click", function(){
     if (!ready && !errored) return;
@@ -513,30 +524,60 @@ if (IS_POPUP){
       msg("通常の表示に戻しました。");
     }
   });
+}
+
+if (IS_POPUP){
+  /* 全画面用の別タブの中：全画面ボタン（使える場合）と「元の画面に戻る」ボタン */
+  btnClose.style.display = "";
+  btnClose.addEventListener("click", function(){ postState(); window.close(); });
+  if (fsEnabled()){
+    setupNativeFullscreen();
+    /* 動画（または再生ボタン）を押したら、すぐに全画面にする */
+    var goFull = function(){ if (!fsElement()) requestFs(null); };
+    shield.addEventListener("click", goFull);
+    document.getElementById("btnPlay").addEventListener("click", goFull);
+    showError("動画をクリック（タップ）すると、全画面で再生が始まります。");
+    /* 全画面を終了したら、このタブを閉じて元の画面に戻る */
+    var wasFull = false;
+    onFsChange(function(){
+      if (fsElement()){ wasFull = true; msg(""); }
+      else if (wasFull){ postState(); setTimeout(function(){ window.close(); }, 200); }
+    });
+  } else if (IS_IOS){
+    setupIosFullscreen();
+    showError("「全画面」を押してから動画の▶をタップすると、全画面で再生されます。");
+  } else {
+    btnFs.style.display = "none";
+  }
+  setInterval(postState, 1000);
+  window.addEventListener("pagehide", postState);
+  window.addEventListener("beforeunload", postState);
+} else if (!IN_FRAME && fsEnabled()){
+  /* このページを直接開いていて、ブラウザの全画面機能が使える場合（パソコン・iPad・Android） */
+  setupNativeFullscreen();
+} else if (!IN_FRAME && IS_IOS){
+  /* このページを直接開いている iPhone */
+  setupIosFullscreen();
 } else {
-  /* パソコン・Android：大きな別ウィンドウを開いて再生する */
+  /* Googleサイトなどの枠の中：枠の中では全画面が許可されないため、このページ自身を別タブで開いて全画面にする */
   setLabel(btnFs, "全画面");
   btnFs.addEventListener("click", openBigWindow);
 }
 
-/* 拡大ウィンドウを開く（視聴状況を引き継ぐ） */
+/* 全画面用の別タブを開く（再生位置・視聴済みの範囲を引き継ぐ） */
 function openBigWindow(){
   if (bigWin && !bigWin.closed){ try { bigWin.focus(); } catch(e) {} return; }
+  if (!PAGE.url){ msg("公開URLで開いているときだけ全画面にできます。"); return; }
   var t = maxWatched;
   try { if (player && player.getCurrentTime) t = player.getCurrentTime(); player.pauseVideo(); } catch(e) {}
-  var html = ORIGINAL_HTML.replace(INIT_TOKEN,
-    "var INIT = " + JSON.stringify({ maxWatched: maxWatched, t: Math.min(t, maxWatched), pageUrl: PAGE.url }) + ";");
-  var w = screen.availWidth || 1280, h = screen.availHeight || 800;
-  bigWin = window.open("", "hoshinBig", "width=" + w + ",height=" + h + ",left=0,top=0");
+  var url = PAGE.url + "?big=1#t=" + Math.floor(Math.min(t, maxWatched)) + "&max=" + (Math.floor(maxWatched * 10) / 10);
+  bigWin = window.open(url, "hoshinBig");
   if (!bigWin){
-    msg("全画面用のウィンドウを開けませんでした。ブラウザのポップアップブロックを解除してから、もう一度押してください。");
+    msg("全画面用のタブを開けませんでした。ブラウザのポップアップブロックを解除してから、もう一度押してください。");
     return;
   }
-  bigWin.document.open();
-  bigWin.document.write(html);
-  bigWin.document.close();
   setLabel(btnFs, "全画面で再生中");
-  msg("全画面用のウィンドウで再生します。全画面を終了すると、この画面に戻ります。");
+  msg("別のタブで全画面再生します。全画面を終了すると、この画面に戻ります。");
   clearInterval(bigWinTimer);
   bigWinTimer = setInterval(function(){
     if (bigWin && bigWin.closed){
@@ -610,7 +651,7 @@ function finish(){
   if (!duration || maxWatched < duration * DONE_RATE) return;  // 最後まで見ていない場合は表示しない
   unlocked = true;
   maxWatched = duration; save(); refresh();
-  if (document.fullscreenElement){ try { document.exitFullscreen(); } catch(e) {} }
+  if (fsElement()) exitFs();
   document.getElementById("lockedNote").style.display = "none";
   var box = document.getElementById("survey");
   box.style.display = "block";
@@ -647,21 +688,21 @@ function refresh(forceTime){
 function showSafariHelp(){
   if (IS_POPUP) return;
   var box = document.getElementById("openSafari");
-  document.getElementById("siteUrl").value = decodeURISafe(SITE_URL);
+  document.getElementById("siteUrl").value = decodeURISafe(PAGE.url || SITE_URL);
   box.style.display = "block";
 }
 function decodeURISafe(u){ try { return decodeURI(u); } catch(e) { return u; } }
 document.getElementById("btnCopy").addEventListener("click", function(){
   var input = document.getElementById("siteUrl");
   var result = document.getElementById("copyResult");
-  var text = SITE_URL;
+  var text = PAGE.url || SITE_URL;
   function fallback(){
     /* 自動コピーが使えない場合：URLを選択状態にする */
     input.focus(); input.select();
     try { input.setSelectionRange(0, input.value.length); } catch(e) {}
     var ok = false;
     try { input.value = text; input.select(); ok = document.execCommand("copy"); } catch(e) {}
-    input.value = decodeURISafe(SITE_URL);
+    input.value = decodeURISafe(text);
     result.textContent = ok
       ? "コピーしました。Safariを開いて、アドレス欄に貼り付けてください。"
       : "自動でコピーできませんでした。上のURLを長押しして「すべてを選択」→「コピー」してください。";
